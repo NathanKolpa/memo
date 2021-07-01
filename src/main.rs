@@ -2,12 +2,11 @@ use clap::{Arg, App};
 use std::option::Option::Some;
 use std::{env, io};
 use sha2::{Sha256, Digest};
-use sha2::digest::DynDigest;
 use std::fs::File;
-use std::io::{BufReader, BufRead, Seek, SeekFrom, Write, LineWriter};
+use std::io::{BufReader, Write, Read};
 use std::process::{Command, Stdio};
 
-fn main() {
+fn main() -> Result<(), std::io::Error> {
 	let matches = App::new("memo")
 		.version("1.0")
 		.author("Nathan Kolpa <nathan@kolpa.me>")
@@ -32,55 +31,58 @@ fn main() {
 		)
 		.get_matches();
 
-	if let Some(key) = matches.value_of("KEY") {
-		let mut dir = env::temp_dir().join("memo");
-		std::fs::create_dir(dir.clone());
+	let key = matches.value_of("KEY").unwrap();
+	let dir = env::temp_dir().join("memo");
 
-		let key_hash = Sha256::digest(key.as_bytes());
-		let file_path = dir.join(format!("{:X}", key_hash));
+	if !dir.exists() {
+		std::fs::create_dir(dir.clone())?;
+	}
 
-		if file_path.exists() {
-			let stdout = io::stdout();
-			let mut stdout = stdout.lock();
+	let key_hash = Sha256::digest(key.as_bytes());
+	let file_path = dir.join(format!("{:X}", key_hash));
 
-			let mut file = File::open(file_path).expect("Unexpected file race condition");
+	if file_path.exists() {
+		let stdout = io::stdout();
+		let mut stdout = stdout.lock();
 
-			io::copy(&mut file, &mut stdout);
-		} else {
-			if let Some(cmd) = matches.values_of("COMMAND") {
-				let cmd: Vec<&str> = cmd.collect();
-				let first = cmd.first().expect("No command provided");
-				let args: Vec<&&str> = cmd.iter().skip(1).collect();
+		let mut file = File::open(file_path).expect("Unexpected file race condition");
 
-				let mut child = Command::new(first)
-					.args(args)
-					.stdout(Stdio::piped())
-					.spawn()
-					.expect("Failed to execute command");
+		io::copy(&mut file, &mut stdout)?;
+	} else {
+		let cmd = matches.values_of("COMMAND").unwrap();
+		let cmd: Vec<&str> = cmd.collect();
+		let first = cmd.first().expect("No command provided");
+		let args: Vec<&&str> = cmd.iter().skip(1).collect();
+
+		let mut child = Command::new(first)
+			.args(args)
+			.stdout(Stdio::piped())
+			.spawn()?;
 
 
-				if let Some(ref mut stdout) = child.stdout {
-					let mut file = File::create(file_path).expect("Could not create file");
-					let mut file = LineWriter::new(file);
+		if let Some(ref mut stdout) = child.stdout {
+			let mut file = File::create(file_path).expect("Could not create file");
+			let mut out = std::io::stdout();
 
-					let mut reader = BufReader::new(stdout);
+			let mut reader = BufReader::new(stdout);
 
-					let mut line = String::new();
-					while let Ok(size) = reader.read_line(&mut line) {
-						if size <= 0 {
-							break;
-						}
+			let mut buffer = [0; 2000];
 
-						println!("{}", line);
-						file.write_all(line.as_ref());
-
-						line.clear();
-					}
-
-					file.flush();
+			while let Ok(size) = reader.read(&mut buffer) {
+				if size <= 0 {
+					break;
 				}
 
+				let view = &buffer[0..size];
+
+				out.write_all(view)?;
+				file.write_all(view)?;
 			}
+
+			file.flush()?;
+			out.flush()?;
 		}
 	}
+
+	Ok(())
 }
