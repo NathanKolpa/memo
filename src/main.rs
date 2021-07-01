@@ -15,8 +15,7 @@ fn main() -> Result<(), std::io::Error> {
 			Arg::new("KEY")
 				.value_name("KEY")
 				.takes_value(true)
-				.short('k')
-				.long("key")
+				.index(1)
 				.about("The key for your memo")
 				.required(true)
 		)
@@ -28,6 +27,7 @@ fn main() -> Result<(), std::io::Error> {
 				.multiple(true)
 				.min_values(1)
 				.required(true)
+				.index(2)
 		)
 		.get_matches();
 
