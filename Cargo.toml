@@ -3,8 +3,13 @@ name = "memo"
 version = "1.0.0"
 authors = ["Nathan Kolpa <nathan@kolpa.me>"]
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license = "GPLv3"
+description = "A simple utility to memoize commands."
+readme = "README.md"
+homepage = "https://github.com/NathanKolpa/memo"
+repository = "https://github.com/NathanKolpa/memo"
+keywords = ["cli", "utility"]
+categories = ["command-line-utilities"]
 
 [dependencies]
 clap = "3.0.0-beta.2"
