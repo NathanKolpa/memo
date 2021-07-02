@@ -3,3 +3,6 @@ target
 pkg
 *.pkg.tar.zst
 PKGBUILD
+*.gz
+src/memo
+src/LICENSE
