@@ -1,2 +1,5 @@
 target
 .idea
+pkg
+*.pkg.tar.zst
+PKGBUILD
